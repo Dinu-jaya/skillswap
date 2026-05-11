@@ -1,0 +1,21 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://127.0.0.1:5173",
+      "https://skillswap-4c63e.web.app",
+      "https://skillswap-4c63e.firebaseapp.com"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Disposition",
+      "Authorization",
+      "X-Goog-Meta-OriginalName",
+      "X-Goog-Meta-UploadedAt"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
