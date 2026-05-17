@@ -107,6 +107,7 @@ const Navbar = () => {
                       <Link to="/profile" className="flex shrink-0">
                         <Avatar
                           avatarId={userProfile?.avatar}
+                          avatarUrl={userProfile?.avatarType === 'custom' ? userProfile?.avatarUrl : null}
                           size={36}
                           className="rounded-xl border border-white/[0.08] hover:border-cyan-400/50 transition-colors"
                         />
@@ -170,6 +171,7 @@ const Navbar = () => {
                       <div className="flex items-center gap-3">
                         <Avatar
                           avatarId={userProfile?.avatar}
+                          avatarUrl={userProfile?.avatarType === 'custom' ? userProfile?.avatarUrl : null}
                           size={40}
                           className="rounded-full border border-white/10"
                         />

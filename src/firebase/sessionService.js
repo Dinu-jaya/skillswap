@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -12,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { incrementCompletedSessions } from './contractService';
+import { awardXP, XP_REWARDS } from '../services/xpService';
 
 const SESSIONS_COL = 'exchangeSessions';
 
@@ -73,6 +75,10 @@ export const createSession = async ({
 export const completeSession = async (sessionId, contractId, notes = '', proofUrl = '') => {
   log('Completing session', { sessionId, contractId });
 
+  // Read taughtBy BEFORE updating (needed for XP award)
+  const sessionSnap = await getDoc(doc(db, SESSIONS_COL, sessionId));
+  const taughtBy = sessionSnap.exists() ? (sessionSnap.data().taughtBy || null) : null;
+
   await updateDoc(doc(db, SESSIONS_COL, sessionId), {
     status: 'completed',
     completedAt: serverTimestamp(),
@@ -84,6 +90,14 @@ export const completeSession = async (sessionId, contractId, notes = '', proofUr
 
   // Increment counter on the parent contract (may auto-complete it)
   await incrementCompletedSessions(contractId);
+
+  // Award XP to the teacher — fire-and-forget, never blocks completion
+  if (taughtBy) {
+    const xpAmount = XP_REWARDS.SESSION_COMPLETED + (proofUrl.trim() ? XP_REWARDS.PROOF_SUBMITTED : 0);
+    awardXP(taughtBy, xpAmount, 'session_completed').catch((err) =>
+      console.warn('[sessionService] XP award failed (non-critical):', err.message)
+    );
+  }
 };
 
 // ─── Add / update notes on a session ─────────────────────────────────────────

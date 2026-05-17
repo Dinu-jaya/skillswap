@@ -16,7 +16,6 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
     "autoprefixer": "^10.5.0",
-    "axios": "^1.16.0",
     "clsx": "^2.1.1",
     "firebase": "^12.13.0",
     "framer-motion": "^12.38.0",

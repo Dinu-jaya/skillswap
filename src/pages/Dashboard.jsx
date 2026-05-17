@@ -29,6 +29,7 @@ import RequestCard from '../components/RequestCard';
 import ActivityTimeline from '../components/ActivityTimeline';
 import RecommendedUserCard from '../components/RecommendedUserCard';
 import ContractCard from '../components/ContractCard';
+import XPWidget from '../components/XPWidget';
 import { useNotifications } from '../context/NotificationContext';
 
 // ── Icon map for skill categories ─────────────────────────────────────────────
@@ -272,7 +273,7 @@ const Dashboard = () => {
       {/* ── Stats grid ─────────────────────────────────────── */}
       <motion.section className="section-spacing" {...fadeUp(1)}>
         <p className="section-label mb-4">Overview</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.05] rounded-xl overflow-hidden border border-white/[0.05]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.05] rounded-xl overflow-hidden border border-white/[0.05]">
           {stats.map((stat, i) => (
             <StatCard key={i} {...stat} />
           ))}
@@ -312,11 +313,11 @@ const Dashboard = () => {
         </motion.section>
       )}
 
-      {/* ── Main layout: 3 + 2 ─────────────────────────────── */}
+      {/* ── Main layout: 8 + 4 ─────────────────────────────── */}
       <div className="layout-grid">
 
-        {/* Left: Trending + Requests (3 cols) */}
-        <div className="lg:col-span-3 space-y-16">
+        {/* Left: Trending + Requests (8 cols) */}
+        <div className="lg:col-span-8 space-y-16">
 
           {/* Trending Skills */}
           <motion.section {...fadeUp(2)}>
@@ -404,8 +405,14 @@ const Dashboard = () => {
           </motion.section>
         </div>
 
-        {/* Right: People + Activity (2 cols) */}
-        <div className="lg:col-span-2 space-y-14">
+        {/* Right: XP + People + Activity (4 cols) */}
+        <div className="lg:col-span-4 space-y-14">
+
+          {/* XP Progression Widget */}
+          <motion.section {...fadeUp(3)}>
+            <p className="section-label mb-4">Your progression</p>
+            <XPWidget />
+          </motion.section>
 
           {/* Recommended People */}
           <motion.section {...fadeUp(4)}>

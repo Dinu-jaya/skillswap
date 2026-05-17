@@ -4,6 +4,7 @@ import { Loader2, MessageSquare, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Avatar from '../components/Avatar';
 import { useAuth } from '../context/AuthContext';
+import { useUserAvatar } from '../hooks/useUserAvatar';
 import { startConversationWithUser } from '../firebase/chatService';
 import CreateContractModal from '../components/CreateContractModal';
 import Toast from '../components/Toast';
@@ -34,6 +35,81 @@ const formatTime = (ts) => {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+};
+
+// ─── RequestRow ────────────────────────────────────────────────────────────
+
+/**
+ * Renders a single request row with a live avatar subscription.
+ * Uses useUserAvatar(peerUid) so the avatar is always current,
+ * regardless of what was stored in the request document at creation time.
+ */
+const RequestRow = ({ req, index, activeTab, currentUser, loading, onAction, onOpenChat, onContract }) => {
+  const isSender    = req.senderId === currentUser?.uid;
+  const peerUid     = isSender ? req.receiverId : req.senderId;
+  const displayName = activeTab === 'Sent' ? (req.receiverName || 'User') : (req.senderName || 'User');
+
+  // Live avatar — ignores stale senderAvatar/receiverAvatar on the request doc
+  const { avatarId, avatarUrl } = useUserAvatar(peerUid);
+
+  return (
+    <motion.div
+      key={req.id}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0 }}
+      transition={{ delay: index * 0.04 }}
+      className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 hover:bg-white/[0.02] transition-colors"
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <Avatar avatarId={avatarId} avatarUrl={avatarUrl} size={32}
+          className="rounded-full bg-zinc-800 border border-white/[0.08] shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-medium text-zinc-200 truncate">{displayName}</p>
+          <p className="text-[11px] text-zinc-600 truncate mt-0.5">
+            {activeTab === 'Sent' ? 'You requested' : 'Requesting'}{' '}
+            <span className="text-cyan-400/80">{req.skillTitle || 'Skill Exchange'}</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.04]">
+        <span className="text-[11px] text-zinc-600 shrink-0">
+          {formatTime(req.createdAt)}
+        </span>
+
+        {activeTab === 'Pending' ? (
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => onAction(req, 'accept')} disabled={!!loading[req.id]}
+              className="text-[12px] font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-40 transition-colors px-3 py-1.5 min-h-[36px] bg-emerald-400/[0.06] hover:bg-emerald-400/[0.12] rounded-lg">
+              {loading[req.id] === 'accept' ? <Loader2 size={12} className="animate-spin" /> : 'Accept'}
+            </button>
+            <button onClick={() => onAction(req, 'reject')} disabled={!!loading[req.id]}
+              className="text-[12px] font-medium text-zinc-400 hover:text-zinc-200 disabled:opacity-40 transition-colors px-3 py-1.5 min-h-[36px] bg-white/[0.04] hover:bg-white/[0.08] rounded-lg">
+              {loading[req.id] === 'reject' ? <Loader2 size={12} className="animate-spin" /> : 'Decline'}
+            </button>
+          </div>
+        ) : activeTab === 'Accepted' ? (
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => onOpenChat(req)} disabled={false}
+              className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-cyan-400 border border-cyan-400/20 hover:border-cyan-400/40 px-3 py-1.5 min-h-[36px] rounded-lg bg-cyan-400/[0.06] hover:bg-cyan-400/[0.12] transition-all shrink-0">
+              <MessageSquare size={13} /> Message
+            </button>
+            <button onClick={() => onContract(req)}
+              className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-violet-400 border border-violet-400/20 hover:border-violet-400/40 px-3 py-1.5 min-h-[36px] rounded-lg bg-violet-400/[0.06] hover:bg-violet-400/[0.12] transition-all shrink-0">
+              <FileText size={13} /> Contract
+            </button>
+          </div>
+        ) : (
+          <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 ${
+            req.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-400'
+            : req.status === 'rejected' ? 'bg-red-500/10 text-red-400'
+            : 'bg-zinc-800 text-zinc-500'
+          }`}>
+            {req.status === 'accepted' ? 'Accepted' : req.status === 'rejected' ? 'Declined' : 'Pending'}
+          </span>
+        )}
+      </div>
+    </motion.div>
+  );
 };
 
 const Requests = () => {
@@ -97,7 +173,7 @@ const Requests = () => {
   const items = listMap[activeTab] || [];
 
   return (
-    <div className="page-container !max-w-3xl">
+    <div className="page-container">
       {/* Header */}
       <motion.div className="header-spacing" {...fadeUp(0)}>
         <p className="section-label mb-4">Your exchanges</p>
@@ -106,7 +182,7 @@ const Requests = () => {
       </motion.div>
 
       {/* Tabs */}
-      <motion.div className="flex gap-1 mb-8 border-b border-white/[0.06]" {...fadeUp(1)}>
+      <motion.div className="flex overflow-x-auto gap-1 mb-8 border-b border-white/[0.06] scrollbar-none" {...fadeUp(1)}>
         {TABS.map((tab) => {
           const count = listMap[tab]?.length || 0;
           return (
@@ -129,80 +205,24 @@ const Requests = () => {
         {items.length > 0 ? (
           <div className="border border-white/[0.06] rounded-xl overflow-hidden divide-y divide-white/[0.04]">
             <AnimatePresence>
-              {items.map((req, i) => {
-                // Determine display name/avatar based on perspective
-                const isSender = req.senderId === currentUser?.uid;
-                const displayName = activeTab === 'Sent'
-                  ? (req.receiverName || 'User')
-                  : (req.senderName || 'User');
-                const displayAvatar = activeTab === 'Sent'
-                  ? (req.receiverAvatar || null)
-                  : (req.senderAvatar || null);
-
-                return (
-                  <motion.div key={req.id}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, height: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors">
-                    <Avatar avatarId={displayAvatar} size={32}
-                      className="rounded-full bg-zinc-800 border border-white/[0.08] shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-zinc-200 truncate">{displayName}</p>
-                      <p className="text-[11px] text-zinc-600 truncate mt-0.5">
-                        {activeTab === 'Sent' ? 'You requested' : 'Requesting'}{' '}
-                        <span className="text-cyan-400/80">{req.skillTitle || 'Skill Exchange'}</span>
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-zinc-600 hidden sm:block shrink-0">
-                      {formatTime(req.createdAt)}
-                    </span>
-
-                    {activeTab === 'Pending' ? (
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => handleAction(req, 'accept')} disabled={!!loading[req.id]}
-                          className="text-[12px] font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-40 transition-colors px-2 py-1">
-                          {loading[req.id] === 'accept' ? <Loader2 size={12} className="animate-spin" /> : 'Accept'}
-                        </button>
-                        <button onClick={() => handleAction(req, 'reject')} disabled={!!loading[req.id]}
-                          className="text-[12px] font-medium text-zinc-600 hover:text-zinc-400 disabled:opacity-40 transition-colors px-2 py-1">
-                          {loading[req.id] === 'reject' ? <Loader2 size={12} className="animate-spin" /> : 'Decline'}
-                        </button>
-                      </div>
-                    ) : activeTab === 'Accepted' ? (
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button onClick={() => handleOpenChat(req)} disabled={startingChat === req.id}
-                          className="flex items-center gap-1.5 text-[11px] font-medium text-cyan-400 border border-cyan-400/20 hover:border-cyan-400/40 px-3 py-1.5 rounded-lg bg-cyan-400/[0.06] hover:bg-cyan-400/[0.12] disabled:opacity-50 transition-all shrink-0">
-                          {startingChat === req.id
-                            ? <span className="w-3 h-3 border border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                            : <MessageSquare size={11} />}
-                          Message
-                        </button>
-                        <button
-                          onClick={() => {
-                            const peerId = req.senderId === currentUser?.uid ? req.receiverId : req.senderId;
-                            const peerName = req.senderId === currentUser?.uid ? req.receiverName : req.senderName;
-                            const peerAvatar = req.senderId === currentUser?.uid ? req.receiverAvatar : req.senderAvatar;
-                            setContractPartner({ uid: peerId, name: peerName, avatar: peerAvatar });
-                            setShowCreateContract(true);
-                          }}
-                          title="Propose an exchange contract"
-                          className="flex items-center gap-1.5 text-[11px] font-medium text-violet-400 border border-violet-400/20 hover:border-violet-400/40 px-3 py-1.5 rounded-lg bg-violet-400/[0.06] hover:bg-violet-400/[0.12] transition-all shrink-0"
-                        >
-                          <FileText size={11} />
-                          Contract
-                        </button>
-                      </div>
-                    ) : (
-                      <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0 ${
-                        req.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-400'
-                        : req.status === 'rejected' ? 'bg-red-500/10 text-red-400'
-                        : 'bg-zinc-800 text-zinc-500'}`}>
-                        {req.status === 'accepted' ? 'Accepted' : req.status === 'rejected' ? 'Declined' : 'Pending'}
-                      </span>
-                    )}
-                  </motion.div>
-                );
-              })}
+              {items.map((req, i) => (
+                <RequestRow
+                  key={req.id}
+                  req={req}
+                  index={i}
+                  activeTab={activeTab}
+                  currentUser={currentUser}
+                  loading={loading}
+                  onAction={handleAction}
+                  onOpenChat={handleOpenChat}
+                  onContract={(req) => {
+                    const peerId   = req.senderId === currentUser?.uid ? req.receiverId : req.senderId;
+                    const peerName = req.senderId === currentUser?.uid ? req.receiverName : req.senderName;
+                    setContractPartner({ uid: peerId, name: peerName, avatar: null });
+                    setShowCreateContract(true);
+                  }}
+                />
+              ))}
             </AnimatePresence>
           </div>
         ) : (

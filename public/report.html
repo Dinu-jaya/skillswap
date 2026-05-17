@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillSwap – Mini Project Report</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a2e;
+      --muted: #64748b;
+      --accent: #0ea5e9;
+      --border: #e2e8f0;
+      --surface: #f8fafc;
+      --code-bg: #f1f5f9;
+      --table-header: #f1f5f9;
+      --table-border: #e2e8f0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Toolbar ────────────────────── */
+    .toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .toolbar-title {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+    }
+    .toolbar-actions { display: flex; gap: 10px; }
+    .toolbar-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+    }
+    .btn-download {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-download:hover { background: #0284c7; transform: translateY(-1px); }
+    .btn-print {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-print:hover { background: #e2e8f0; }
+
+    /* ── Content Area ──────────────── */
+    .report {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 80px 40px 60px;
+    }
+
+    /* ── Typography ─────────────────── */
+    h1 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 48px 0 16px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent);
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 21px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 36px 0 12px;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 28px 0 10px;
+      color: #334155;
+    }
+    p { margin: 0 0 14px; }
+    strong { font-weight: 600; }
+
+    ul, ol {
+      margin: 0 0 14px;
+      padding-left: 24px;
+    }
+    li { margin-bottom: 6px; }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Code Blocks ───────────────── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 14px 0 18px;
+      font-family: 'Menlo', 'Consolas', monospace;
+    }
+    code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'Menlo', 'Consolas', monospace;
+    }
+    pre code { background: none; padding: 0; }
+
+    /* ── Tables ─────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 13.5px;
+    }
+    th {
+      background: var(--table-header);
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--table-border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 9px 14px;
+      border: 1px solid var(--table-border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: var(--surface); }
+
+    /* ── Blockquote ─────────────────── */
+    blockquote {
+      border-left: 4px solid var(--accent);
+      padding: 12px 20px;
+      margin: 14px 0;
+      background: var(--surface);
+      border-radius: 0 8px 8px 0;
+      color: var(--muted);
+    }
+
+    /* ── Keywords / Tags ───────────── */
+    .keywords { color: var(--muted); font-style: italic; }
+
+    /* ── Loading ────────────────────── */
+    .loading {
+      text-align: center;
+      padding: 120px 20px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Print Styles ──────────────── */
+    @media print {
+      .toolbar { display: none !important; }
+      .report { padding: 0; max-width: 100%; }
+      body { font-size: 12px; line-height: 1.5; }
+      h1 { font-size: 22px; page-break-after: avoid; }
+      h2 { font-size: 17px; page-break-after: avoid; }
+      h3 { font-size: 14px; }
+      pre { font-size: 10px; }
+      table { font-size: 11px; }
+      hr { margin: 24px 0; }
+      a { color: inherit; }
+    }
+
+    @media (max-width: 640px) {
+      .report { padding: 70px 16px 40px; }
+      h1 { font-size: 22px; }
+      h2 { font-size: 18px; }
+      .toolbar-title { font-size: 13px; }
+      .toolbar-btn { padding: 6px 12px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="toolbar-title">📄 SkillSwap – Mini Project Report</span>
+    <div class="toolbar-actions">
+      <button class="toolbar-btn btn-print" onclick="window.print()">
+        🖨️ Print / Save PDF
+      </button>
+      <a class="toolbar-btn btn-download" href="/SkillSwap_Project_Report.md" download="SkillSwap_Project_Report.md">
+        ⬇️ Download .md
+      </a>
+    </div>
+  </div>
+
+  <!-- Report Content -->
+  <div class="report" id="report">
+    <div class="loading">
+      <div class="spinner"></div>
+      Loading report…
+    </div>
+  </div>
+
+  <script>
+    // Minimal Markdown → HTML converter (no dependencies)
+    function md(text) {
+      let html = text;
+
+      // Escape HTML entities inside code blocks first
+      const codeBlocks = [];
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+        const idx = codeBlocks.length;
+        codeBlocks.push('<pre><code>' + code.replace(/</g,'&lt;').replace(/>/g,'&gt;').trim() + '</code></pre>');
+        return `%%CODEBLOCK_${idx}%%`;
+      });
+
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Headers
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+      // Horizontal rules
+      html = html.replace(/^---$/gm, '<hr>');
+
+      // Bold + Italic
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+      // Links
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+      // Tables
+      html = html.replace(/^(\|.+\|)\n(\|[\s\-:|]+\|)\n((?:\|.+\|\n?)+)/gm, (_, hdr, sep, body) => {
+        const headers = hdr.split('|').filter(c => c.trim()).map(c => `<th>${c.trim()}</th>`).join('');
+        const rows = body.trim().split('\n').map(row => {
+          const cells = row.split('|').filter(c => c.trim()).map(c => `<td>${c.trim()}</td>`).join('');
+          return `<tr>${cells}</tr>`;
+        }).join('');
+        return `<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+      });
+
+      // Lists (unordered)
+      html = html.replace(/^(\s*)[-*] (.+)$/gm, (_, indent, content) => {
+        const level = indent.length >= 3 ? '   ' : '';
+        return `${level}<li>${content}</li>`;
+      });
+
+      // Lists (ordered)
+      html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+      // Wrap consecutive <li> in <ul> or <ol>
+      html = html.replace(/((?:\s*<li>.*<\/li>\n?)+)/g, (match) => {
+        return '<ul>' + match + '</ul>';
+      });
+
+      // Paragraphs (lines not already wrapped)
+      const lines = html.split('\n');
+      const result = [];
+      let inParagraph = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          if (inParagraph) { result.push('</p>'); inParagraph = false; }
+          continue;
+        }
+
+        if (trimmed.startsWith('<h') || trimmed.startsWith('<hr') || 
+            trimmed.startsWith('<table') || trimmed.startsWith('<ul') || 
+            trimmed.startsWith('<ol') || trimmed.startsWith('<pre') || 
+            trimmed.startsWith('<li') || trimmed.startsWith('%%CODEBLOCK') ||
+            trimmed.startsWith('</')) {
+          if (inParagraph) { result.push('</p>'); inParagraph = false; }
+          result.push(line);
+          continue;
+        }
+
+        if (!inParagraph) {
+          result.push('<p>' + line);
+          inParagraph = true;
+        } else {
+          result.push(' ' + line);
+        }
+      }
+      if (inParagraph) result.push('</p>');
+
+      html = result.join('\n');
+
+      // Restore code blocks
+      codeBlocks.forEach((block, i) => {
+        html = html.replace(`%%CODEBLOCK_${i}%%`, block);
+      });
+
+      return html;
+    }
+
+    // Fetch and render
+    fetch('/SkillSwap_Project_Report.md')
+      .then(r => r.text())
+      .then(text => {
+        document.getElementById('report').innerHTML = md(text);
+      })
+      .catch(err => {
+        document.getElementById('report').innerHTML = '<p style="color:red;">Failed to load report: ' + err.message + '</p>';
+      });
+  </script>
+</body>
+</html>

@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { createNotification } from './notificationService';
+import { awardXP, XP_REWARDS } from '../services/xpService';
 
 const CONTRACTS_COL = 'exchangeContracts';
 
@@ -275,6 +276,14 @@ export const incrementCompletedSessions = async (contractId) => {
       `Your exchange contract with ${data.requesterName} is now complete! 🎉`,
       data.requesterName || 'User',
       data.requesterAvatar || null
+    );
+
+    // Award XP to both parties for completing the full contract
+    awardXP(data.requesterId, XP_REWARDS.CONTRACT_COMPLETED, 'contract_completed').catch(
+      (err) => console.warn('[contractService] XP award (requester) failed (non-critical):', err.message)
+    );
+    awardXP(data.partnerId, XP_REWARDS.CONTRACT_COMPLETED, 'contract_completed').catch(
+      (err) => console.warn('[contractService] XP award (partner) failed (non-critical):', err.message)
     );
   } else {
     await updateDoc(contractRef, {

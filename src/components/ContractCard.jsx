@@ -97,7 +97,7 @@ const ContractCard = ({
       className="glass-card p-5 hover:border-white/[0.11] transition-all group"
     >
       {/* Header row */}
-      <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-cyan-400/[0.08] border border-cyan-400/20 flex items-center justify-center shrink-0">
             <FileText size={15} className="text-cyan-400" />
@@ -123,15 +123,15 @@ const ContractCard = ({
 
       {/* Skills exchange row */}
       {!compact && (
-        <div className="flex items-center gap-2 mb-4 p-3 bg-white/[0.02] rounded-lg border border-white/[0.04]">
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row items-center gap-2 mb-4 p-3 bg-white/[0.02] rounded-lg border border-white/[0.04]">
+          <div className="flex-1 min-w-0 text-center sm:text-left w-full sm:w-auto">
             <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-0.5">You teach</p>
             <p className="text-[12px] text-zinc-300 font-medium truncate">
               {mySkillOffered || '—'}
             </p>
           </div>
-          <ArrowLeftRight size={12} className="text-zinc-700 shrink-0" />
-          <div className="flex-1 min-w-0 text-right">
+          <ArrowLeftRight size={12} className="text-zinc-700 shrink-0 rotate-90 sm:rotate-0 my-1 sm:my-0" />
+          <div className="flex-1 min-w-0 text-center sm:text-right w-full sm:w-auto">
             <p className="text-[10px] text-zinc-600 uppercase tracking-wide mb-0.5">You learn</p>
             <p className="text-[12px] text-zinc-300 font-medium truncate">
               {partnerSkillOffered || '—'}
@@ -171,7 +171,7 @@ const ContractCard = ({
         {(contract.status === 'active' || contract.status === 'completed') && (
           <button
             onClick={() => navigate(`/contracts/${contract.id}/sessions`)}
-            className="flex items-center gap-1.5 text-[12px] font-medium text-cyan-400 border border-cyan-400/20 hover:border-cyan-400/40 px-3 py-1.5 rounded-lg bg-cyan-400/[0.06] hover:bg-cyan-400/[0.12] transition-all"
+            className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-cyan-400 border border-cyan-400/20 hover:border-cyan-400/40 px-3 py-1.5 min-h-[44px] sm:min-h-[36px] w-full sm:w-auto rounded-lg bg-cyan-400/[0.06] hover:bg-cyan-400/[0.12] transition-all"
           >
             <FileText size={11} />
             Sessions
@@ -184,7 +184,7 @@ const ContractCard = ({
           <button
             onClick={onAccept}
             disabled={loading.accept}
-            className="flex items-center gap-1.5 text-[12px] font-medium text-emerald-400 border border-emerald-400/20 hover:border-emerald-400/40 px-3 py-1.5 rounded-lg bg-emerald-400/[0.06] hover:bg-emerald-400/[0.12] disabled:opacity-50 transition-all"
+            className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-emerald-400 border border-emerald-400/20 hover:border-emerald-400/40 px-3 py-1.5 min-h-[44px] sm:min-h-[36px] flex-1 sm:flex-none rounded-lg bg-emerald-400/[0.06] hover:bg-emerald-400/[0.12] disabled:opacity-50 transition-all"
           >
             {loading.accept ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
             Accept
@@ -196,7 +196,7 @@ const ContractCard = ({
           <button
             onClick={onReject}
             disabled={loading.reject}
-            className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:border-white/[0.12] px-3 py-1.5 rounded-lg hover:bg-white/[0.03] disabled:opacity-50 transition-all"
+            className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-zinc-500 hover:text-zinc-300 border border-white/[0.06] hover:border-white/[0.12] px-3 py-1.5 min-h-[44px] sm:min-h-[36px] flex-1 sm:flex-none rounded-lg hover:bg-white/[0.03] disabled:opacity-50 transition-all"
           >
             {loading.reject ? <Loader2 size={11} className="animate-spin" /> : <XCircle size={11} />}
             Decline
@@ -208,7 +208,7 @@ const ContractCard = ({
           <button
             onClick={onCancel}
             disabled={loading.cancel}
-            className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-600 hover:text-red-400 border border-white/[0.04] hover:border-red-400/20 px-3 py-1.5 rounded-lg hover:bg-red-400/[0.06] disabled:opacity-50 transition-all ml-auto"
+            className="flex items-center justify-center gap-1.5 text-[12px] font-medium text-zinc-600 hover:text-red-400 border border-white/[0.04] hover:border-red-400/20 px-3 py-1.5 min-h-[44px] sm:min-h-[36px] w-full sm:w-auto rounded-lg hover:bg-red-400/[0.06] disabled:opacity-50 transition-all sm:ml-auto"
           >
             {loading.cancel ? <Loader2 size={11} className="animate-spin" /> : <XCircle size={11} />}
             Cancel

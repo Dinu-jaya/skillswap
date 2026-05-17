@@ -74,58 +74,65 @@ function LinkifiedText({ text, isMe }) {
  * Converts any message shape into a normalized { text, attachment } pair.
  * attachment is an AttachmentMeta object (or null for text-only messages).
  *
+ * Handles three Firestore schemas:
+ *   [v3 Firebase]  msg.{ type:'attachment', attachment: AttachmentMeta }
+ *                  AttachmentMeta: { type, fileCategory, fileName, mimeType, size, url, storagePath, uploadedAt }
+ *   [v2 flat]      msg.{ fileUrl, fileName, mimeType, fileSize, ... }
+ *   [Legacy]       msg.attachment.{ url, name, type, size }
+ *
  * @param {object} msg
  * @returns {{ text: string, attachment: object|null }}
  */
 function normalizeMessage(msg) {
-  // ── v3 (new): type='attachment' + full AttachmentMeta ────────────────────
+  // ── v3 (Firebase Storage): type='attachment' + full AttachmentMeta ────────────────
   if (msg.type === 'attachment' && msg.attachment?.url) {
     console.log('[MessageBubble] v3 schema detected');
+    const att = msg.attachment;
     return {
       text:       msg.text || '',
-      attachment: msg.attachment,
+      attachment: {
+        ...att,
+        // Prefer new Firebase names; fall back to old Cloudinary names for old messages
+        fileName: att.fileName || att.originalName || null,
+        size:     att.size     ?? att.bytes          ?? null,
+      },
     };
   }
 
-  // ── v2 (current): flat fileUrl fields ────────────────────────────────────
+  // ── v2 (flat fileUrl fields) ─────────────────────────────────────────────
   if (msg.fileUrl) {
     const mimeType = msg.mimeType || '';
     console.log('[MessageBubble] v2 schema detected, fileUrl:', msg.fileUrl);
     return {
       text: msg.text || '',
       attachment: {
-        type:         'attachment',
+        type:        'attachment',
         fileCategory: getFileCategory(mimeType),
         mimeType,
-        resourceType: msg.resourceType || (mimeType.startsWith('image/') ? 'image' : 'raw'),
-        url:          msg.fileUrl,
-        publicId:     msg.publicId  || null,
-        format:       msg.format    || null,
-        bytes:        msg.fileSize  ?? null,
-        originalName: msg.fileName  || null,
-        createdAt:    null,
+        url:         msg.fileUrl,
+        storagePath: null,
+        fileName:    msg.fileName  || null,
+        size:        msg.fileSize  ?? null,
+        uploadedAt:  null,
       },
     };
   }
 
-  // ── Legacy: msg.attachment.url ────────────────────────────────────────────
+  // ── Legacy: msg.attachment.url ──────────────────────────────────────────────
   if (msg.attachment?.url) {
     const mimeType = msg.attachment.type || '';
     console.log('[MessageBubble] Legacy schema detected, url:', msg.attachment.url);
     return {
       text: msg.text || '',
       attachment: {
-        type:         'attachment',
+        type:        'attachment',
         fileCategory: getFileCategory(mimeType),
         mimeType,
-        resourceType: msg.attachment.resourceType ||
-                      (mimeType.startsWith('image/') ? 'image' : 'raw'),
-        url:          msg.attachment.url,
-        publicId:     null,
-        format:       null,
-        bytes:        msg.attachment.size ?? null,
-        originalName: msg.attachment.name || null,
-        createdAt:    null,
+        url:         msg.attachment.url,
+        storagePath: null,
+        fileName:    msg.attachment.name || null,
+        size:        msg.attachment.size ?? null,
+        uploadedAt:  null,
       },
     };
   }
@@ -158,7 +165,7 @@ export default function MessageBubble({ msg, isMe, onDelete }) {
         transition={{ duration: 0.2 }}
         className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} group`}
       >
-        <div className={`relative max-w-[72%] min-w-[4rem]`}>
+        <div className={`relative max-w-[85%] md:max-w-[72%] min-w-[4rem]`}>
           <div className={`rounded-2xl overflow-hidden ${bubbleBase}`}>
 
           {/* Attachment — all rendering delegated to AttachmentRenderer */}

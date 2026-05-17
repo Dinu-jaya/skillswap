@@ -14,15 +14,24 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024;
  * Extend this object to support more file types everywhere automatically.
  */
 export const ALLOWED_MIME_TYPES = {
+  // Images
   'image/jpeg':  'JPEG Image',
   'image/jpg':   'JPEG Image',
   'image/png':   'PNG Image',
   'image/webp':  'WebP Image',
   'image/gif':   'GIF Image',
+  // Documents
   'application/pdf':   'PDF Document',
   'application/msword': 'Word Document (.doc)',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
     'Word Document (.docx)',
+  'application/vnd.ms-powerpoint': 'PowerPoint (.ppt)',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    'PowerPoint (.pptx)',
+  'text/plain': 'Text File (.txt)',
+  // Archives
+  'application/zip':              'ZIP Archive',
+  'application/x-zip-compressed': 'ZIP Archive',
 };
 
 /** Allowed file extensions (without leading dot). */
@@ -30,6 +39,9 @@ export const ALLOWED_EXTENSIONS = new Set([
   'jpg', 'jpeg', 'png', 'webp', 'gif',
   'pdf',
   'doc', 'docx',
+  'ppt', 'pptx',
+  'txt',
+  'zip',
 ]);
 
 /**
@@ -37,7 +49,7 @@ export const ALLOWED_EXTENSIONS = new Set([
  * Keep in sync with ALLOWED_EXTENSIONS.
  */
 export const FILE_INPUT_ACCEPT =
-  '.jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx';
+  '.jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.ppt,.pptx,.txt,.zip';
 
 /**
  * Derives a high-level file category from a MIME type.
@@ -51,12 +63,16 @@ export function getFileCategory(mimeType = '') {
   if (mimeType === 'application/pdf') return 'pdf';
   if (
     mimeType === 'application/msword' ||
-    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mimeType === 'application/vnd.ms-powerpoint' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+    mimeType === 'text/plain'
   )                                   return 'document';
   if (mimeType.startsWith('video/'))  return 'video';
   if (mimeType.startsWith('audio/'))  return 'audio';
   if (
     mimeType === 'application/zip' ||
+    mimeType === 'application/x-zip-compressed' ||
     mimeType === 'application/x-rar-compressed' ||
     mimeType === 'application/x-tar'
   )                                   return 'archive';
@@ -84,12 +100,12 @@ export function validateFile(file) {
   const ext = getExtension(file.name);
   if (!ALLOWED_EXTENSIONS.has(ext)) {
     throw new Error(
-      `Unsupported file type ".${ext}". Allowed: JPG, PNG, WebP, GIF, PDF, DOC, DOCX.`
+      `Unsupported file type ".${ext}". Allowed: JPG, PNG, WebP, GIF, PDF, DOC, DOCX, PPT, PPTX, TXT, ZIP.`
     );
   }
   if (!ALLOWED_MIME_TYPES[file.type]) {
     throw new Error(
-      `Unsupported MIME type "${file.type}". Allowed: images (JPG/PNG/WebP/GIF), PDF, Word documents.`
+      `Unsupported MIME type "${file.type}". Allowed: images, PDF, Word, PowerPoint, text, ZIP.`
     );
   }
 }

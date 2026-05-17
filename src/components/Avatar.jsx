@@ -5,12 +5,19 @@ import { User } from 'lucide-react';
 /**
  * Reusable Avatar component.
  *
+ * Rendering priority:
+ *   1. avatarUrl  → custom uploaded photo (Firebase Storage URL)
+ *   2. avatarId   → preset image from AVATAR_MAP
+ *   3. neither    → User icon fallback
+ *
  * @param {string}  avatarId  - Preset ID from AVATAR_MAP (e.g. 'boy1').
+ * @param {string}  avatarUrl - Custom photo URL (Firebase Storage download URL).
  * @param {number}  size      - Diameter in pixels (default 40).
  * @param {string}  className - Additional Tailwind classes.
  */
-const Avatar = ({ avatarId, size = 40, className = '' }) => {
-  const src = getAvatarSrc(avatarId);
+const Avatar = ({ avatarId, avatarUrl = null, size = 40, className = '' }) => {
+  // Priority 1: custom uploaded photo
+  const src = avatarUrl || getAvatarSrc(avatarId);
 
   if (!src) {
     return (
@@ -32,6 +39,10 @@ const Avatar = ({ avatarId, size = 40, className = '' }) => {
         src={src}
         alt="avatar"
         className="w-full h-full object-cover"
+        onError={(e) => {
+          // If the custom URL is broken, hide img so the fallback User icon shows
+          e.currentTarget.style.display = 'none';
+        }}
       />
     </div>
   );

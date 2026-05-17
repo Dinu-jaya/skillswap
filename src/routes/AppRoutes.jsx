@@ -20,6 +20,7 @@ import About from '../pages/About';
 import AdminDashboard from '../pages/AdminDashboard';
 import Contracts from '../pages/Contracts';
 import SessionsPage from '../pages/SessionsPage';
+import Learn from '../pages/Learn';
 
 const AppRoutes = () => {
   return (
@@ -43,6 +44,7 @@ const AppRoutes = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/contracts" element={<Contracts />} />
           <Route path="/contracts/:contractId/sessions" element={<SessionsPage />} />
+          <Route path="/learn" element={<Learn />} />
           {/* Admin-only route — AdminRoute guards isAdmin check */}
           <Route
             path="/admin"

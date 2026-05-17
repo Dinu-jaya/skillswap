@@ -8,6 +8,7 @@ import {
   LogOut,
   Shield,
   FileText,
+  HelpCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
@@ -53,6 +54,7 @@ const Sidebar = ({ isOpen, setIsOpen, isExpanded, setIsExpanded }) => {
     { name: 'Contracts',    icon: FileText,         path: '/contracts' },
     { name: 'Messages',     icon: MessageSquare,   path: '/chat' },
     { name: 'Profile',      icon: User,            path: '/profile' },
+    { name: 'Learn',        icon: HelpCircle,      path: '/learn' },
     ...(isAdmin ? [{ name: 'Admin', icon: Shield, path: '/admin', accent: true }] : []),
   ];
 
@@ -167,6 +169,7 @@ const Sidebar = ({ isOpen, setIsOpen, isExpanded, setIsExpanded }) => {
           <div className={`flex items-center rounded-lg ${isExpanded ? 'gap-2.5 px-3 py-[9px]' : 'p-2.5'}`}>
             <Avatar
               avatarId={userProfile?.avatar}
+              avatarUrl={userProfile?.avatarType === 'custom' ? userProfile?.avatarUrl : null}
               size={20}
               className="rounded-full shrink-0"
             />

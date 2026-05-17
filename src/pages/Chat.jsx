@@ -18,7 +18,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useFileUpload } from '../hooks/useFileUpload';
+import { useUserAvatar } from '../hooks/useUserAvatar';
 import { formatFileSize, FILE_INPUT_ACCEPT } from '../utils/fileValidation';
+import { deleteAttachment } from '../firebase/storageService';
 import MessageBubble from '../components/MessageBubble';
 import Avatar from '../components/Avatar';
 import {
@@ -28,6 +30,91 @@ import {
   markConversationAsRead,
   deleteMessage,
 } from '../firebase/chatService';
+
+// ─── Live avatar sub-components ──────────────────────────────────────────────
+
+/**
+ * Formats a timestamp into a readable time string.
+ */
+const formatTime = (timestamp) => {
+  if (!timestamp) return "";
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+/**
+ * Renders one conversation row in the sidebar.
+ * Subscribes live to the peer's users/{uid} document so avatar
+ * updates immediately when the peer changes their photo.
+ */
+const ConversationItem = ({ conv, currentUser, isActive, onClick }) => {
+  const otherId = conv.participants?.find(id => id !== currentUser?.uid);
+  const details = conv.participantDetails?.[otherId] || {};
+  const unread  = conv.unreadCounts?.[currentUser?.uid] || 0;
+
+  // Live avatar + level — ignores stale participantDetails.avatar
+  const { avatarId, avatarUrl, level } = useUserAvatar(otherId);
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
+        isActive
+          ? 'bg-cyan-400/[0.08] border border-cyan-400/20'
+          : 'hover:bg-white/[0.04] border border-transparent'
+      }`}
+    >
+      <div className="relative shrink-0">
+        <Avatar avatarId={avatarId} avatarUrl={avatarUrl} size={40} className="rounded-full bg-zinc-800 border border-white/10" />
+        {unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-cyan-400 text-zinc-950 text-[9px] font-black rounded-full flex items-center justify-center">
+            {unread > 9 ? '9+' : unread}
+          </span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className={`text-sm font-semibold truncate ${isActive ? 'text-white' : 'text-zinc-200'}`}>
+              {details.name || 'User'}
+            </p>
+            <span className="text-[9px] text-zinc-600 font-mono shrink-0">Lv.{level}</span>
+          </div>
+          <span className={`text-[10px] shrink-0 ${isActive ? 'text-cyan-400' : 'text-zinc-600'}`}>
+            {formatTime(conv.lastMessageTime || conv.updatedAt)}
+          </span>
+        </div>
+        <p className={`text-xs truncate ${unread > 0 ? 'text-white font-medium' : 'text-zinc-500'}`}>
+          {conv.lastMessage || 'Start a conversation'}
+        </p>
+      </div>
+    </button>
+  );
+};
+
+/**
+ * Renders the peer avatar + name in the active chat header.
+ * Subscribes live to users/{uid} so avatar is always current.
+ */
+const LivePeerAvatar = ({ uid, fallbackName }) => {
+  const { avatarId, avatarUrl, level } = useUserAvatar(uid);
+  return (
+    <>
+      <Avatar avatarId={avatarId} avatarUrl={avatarUrl} size={36} className="rounded-full bg-zinc-800 border border-white/10" />
+      <div>
+        <div className="flex items-center gap-2 leading-none mb-1">
+          <h3 className="text-sm font-semibold text-white">
+            {fallbackName || 'Chat'}
+          </h3>
+          <span className="text-[9px] text-zinc-600 font-mono">Lv.{level}</span>
+        </div>
+        <p className="text-[11px] text-zinc-500">SkillSwap Member</p>
+      </div>
+    </>
+  );
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const Chat = () => {
   const { currentUser } = useAuth();
@@ -106,7 +193,7 @@ const Chat = () => {
 
     try {
       if (file) {
-        attachment = await startUpload(); // resolves with AttachmentMeta
+        attachment = await startUpload(activeConversationId); // pass conversationId for storage path
         removeFile();                     // clear staged file on success
       }
 
@@ -140,12 +227,21 @@ const Chat = () => {
     if (!confirmDelete) return;
     
     try {
+      // Capture storagePath before the Firestore doc disappears
+      const targetMsg = messages.find(m => m.id === messageId);
+      const storagePath = targetMsg?.attachment?.storagePath ?? null;
+
       await deleteMessage(activeConversationId, messageId);
+
+      // Clean up the Storage file if one exists (safe — ignores already-deleted)
+      if (storagePath) {
+        await deleteAttachment(storagePath);
+      }
     } catch (err) {
       console.error('Failed to delete message:', err);
       alert('Failed to delete message. Please try again.');
     }
-  }, [activeConversationId]);
+  }, [activeConversationId, messages]);
 
   // ── Derived values ──────────────────────────────────────────────────────
   const activeConversation      = conversations.find(c => c.id === activeConversationId);
@@ -172,7 +268,7 @@ const Chat = () => {
   // ── Loading ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
+      <div className="h-[calc(100dvh-64px)] lg:h-[100dvh] flex items-center justify-center bg-[#0d0d0f]">
         <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
       </div>
     );
@@ -180,7 +276,7 @@ const Chat = () => {
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="h-[calc(100vh-8rem)] bg-[#0d0d0f] border border-white/[0.06] rounded-2xl overflow-hidden flex shadow-2xl">
+    <div className="h-[calc(100dvh-64px)] lg:h-[100dvh] w-full bg-[#0d0d0f] flex overflow-hidden">
 
       {/* ── Conversations Sidebar ─────────────────────────────────────── */}
       <div className={`w-full md:w-72 lg:w-80 border-r border-white/[0.06] flex-col ${showMobileChat ? 'hidden md:flex' : 'flex'}`}>
@@ -215,50 +311,19 @@ const Chat = () => {
             </div>
           ) : (
             <div className="p-2 space-y-0.5">
-              {filteredConversations.map((conv) => {
-                const otherId  = conv.participants?.find(id => id !== currentUser?.uid);
-                const details  = conv.participantDetails?.[otherId] || { name: 'Unknown', avatar: '' };
-                const isActive = activeConversationId === conv.id;
-                const unread   = conv.unreadCounts?.[currentUser?.uid] || 0;
-
-                return (
-                  <button
-                    key={conv.id}
-                    onClick={() => {
-                      setActiveConversationId(conv.id);
-                      setShowMobileChat(true);
-                      markConversationAsRead(conv.id, currentUser.uid);
-                    }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                      isActive
-                        ? 'bg-cyan-400/[0.08] border border-cyan-400/20'
-                        : 'hover:bg-white/[0.04] border border-transparent'
-                    }`}
-                  >
-                    <div className="relative shrink-0">
-                      <Avatar avatarId={details.avatar} size={40} className="rounded-full bg-zinc-800 border border-white/10" />
-                      {unread > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-cyan-400 text-zinc-950 text-[9px] font-black rounded-full flex items-center justify-center">
-                          {unread > 9 ? '9+' : unread}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
-                        <p className={`text-sm font-semibold truncate ${isActive ? 'text-white' : 'text-zinc-200'}`}>
-                          {details.name}
-                        </p>
-                        <span className={`text-[10px] shrink-0 ${isActive ? 'text-cyan-400' : 'text-zinc-600'}`}>
-                          {formatTime(conv.lastMessageTime || conv.updatedAt)}
-                        </span>
-                      </div>
-                      <p className={`text-xs truncate ${unread > 0 ? 'text-white font-medium' : 'text-zinc-500'}`}>
-                        {conv.lastMessage || 'Start a conversation'}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
+              {filteredConversations.map((conv) => (
+                <ConversationItem
+                  key={conv.id}
+                  conv={conv}
+                  currentUser={currentUser}
+                  isActive={activeConversationId === conv.id}
+                  onClick={() => {
+                    setActiveConversationId(conv.id);
+                    setShowMobileChat(true);
+                    markConversationAsRead(conv.id, currentUser.uid);
+                  }}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -280,13 +345,10 @@ const Chat = () => {
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 </button>
-                <Avatar avatarId={otherParticipantDetails.avatar} size={36} className="rounded-full bg-zinc-800 border border-white/10" />
-                <div>
-                  <h3 className="text-sm font-semibold text-white leading-none mb-1">
-                    {otherParticipantDetails.name || 'Chat'}
-                  </h3>
-                  <p className="text-[11px] text-zinc-500">SkillSwap Member</p>
-                </div>
+                <LivePeerAvatar
+                  uid={otherParticipantId}
+                  fallbackName={otherParticipantDetails.name}
+                />
               </div>
             </div>
 
@@ -301,7 +363,7 @@ const Chat = () => {
             </div>
 
             {/* Input Area */}
-            <div className="px-4 py-3 border-t border-white/[0.06] bg-[#0d0d0f]/80 backdrop-blur-md z-10">
+            <div className="px-4 py-3 border-t border-white/[0.06] bg-[#0d0d0f]/80 backdrop-blur-md z-10 shrink-0">
 
               {/* File attachment / progress / error strip */}
               <AnimatePresence>

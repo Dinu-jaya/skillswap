@@ -63,7 +63,7 @@ const SkillCard = ({ skill, index, currentUser, onMessage, startingChat }) => {
 
       {/* Owner row */}
       <div className="flex items-center gap-2 mt-auto pt-3 border-t border-white/[0.05]">
-        <Avatar avatarId={skill.ownerAvatar} size={24} className="rounded-full" />
+        <Avatar avatarId={skill.ownerAvatar} avatarUrl={skill.ownerAvatarUrl || null} size={24} className="rounded-full" />
         <span className="text-[12px] text-zinc-400 truncate flex-1">{skill.ownerName}</span>
 
         {!isOwn ? (
@@ -203,7 +203,7 @@ const BrowseSkills = () => {
 
       {/* Search + Filters */}
       <motion.div className="mb-10 space-y-6" {...fadeUp(1)}>
-        <div className="relative max-w-md group">
+        <div className="relative w-full max-w-md group">
           <Search
             size={14}
             className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-cyan-400 transition-colors"
@@ -218,14 +218,14 @@ const BrowseSkills = () => {
         </div>
 
         {/* Category pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex overflow-x-auto gap-2 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
           {CATEGORIES.map((cat) => {
             const count = getCatCount(cat);
             return (
               <button
                 key={cat}
                 onClick={() => setCategory(cat)}
-                className={`flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg border transition-all ${
+                className={`flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
                   category === cat
                     ? 'bg-cyan-400/10 border-cyan-400/30 text-cyan-400'
                     : 'bg-transparent border-white/[0.07] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.12]'
@@ -243,13 +243,13 @@ const BrowseSkills = () => {
             );
           })}
 
-          <div className="w-px h-6 bg-white/[0.06] mx-1 self-center" />
+          <div className="w-px h-6 bg-white/[0.06] mx-1 self-center hidden sm:block shrink-0" />
 
           {LEVELS.map((lv) => (
             <button
               key={lv}
               onClick={() => setLevel(lv)}
-              className={`text-[12px] font-medium px-3 py-1.5 rounded-lg border transition-all ${
+              className={`text-[12px] font-medium px-3 py-1.5 rounded-lg border transition-all shrink-0 ${
                 level === lv
                   ? 'bg-violet-400/10 border-violet-400/30 text-violet-400'
                   : 'bg-transparent border-white/[0.07] text-zinc-500 hover:text-zinc-300 hover:border-white/[0.12]'

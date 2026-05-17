@@ -5,11 +5,12 @@
  *   select → validate → preview → upload → result / error / cancel
  *
  * Chat.jsx imports this hook and no longer manages any upload state directly.
+ * Upload is handled by Firebase Storage via storageService.uploadAttachment.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { useState, useRef, useCallback } from 'react';
-import { uploadToCloudinary } from '../services/uploadService';
+import { uploadAttachment } from '../firebase/storageService';
 import { validateFile, isImageMime } from '../utils/fileValidation';
 
 /**
@@ -23,7 +24,7 @@ import { validateFile, isImageMime } from '../utils/fileValidation';
  *   removeFile:   () => void,
  *   cancelUpload: () => void,
  *   clearError:   () => void,
- *   startUpload:  () => Promise<import('../services/uploadService').AttachmentMeta>,
+ *   startUpload:  (conversationId: string) => Promise<import('../firebase/storageService').AttachmentMeta>,
  * }}
  */
 export function useFileUpload() {
@@ -33,7 +34,7 @@ export function useFileUpload() {
   const [progress,    setProgress]    = useState(0);
   const [error,       setError]       = useState(null);
 
-  // Holds the real cancel() fn from uploadToCloudinary
+  // Holds the cancel() fn returned by uploadAttachment
   const cancelRef = useRef(null);
 
   /**
@@ -82,7 +83,7 @@ export function useFileUpload() {
     setError(null);
   }, []);
 
-  /** Abort the in-flight upload (real network cancellation via AbortController). */
+  /** Abort the in-flight upload (real network cancellation via Firebase task). */
   const cancelUpload = useCallback(() => {
     if (cancelRef.current) {
       cancelRef.current();
@@ -97,22 +98,22 @@ export function useFileUpload() {
   const clearError = useCallback(() => setError(null), []);
 
   /**
-   * Start uploading the staged file.
+   * Start uploading the staged file to Firebase Storage.
    * Resolves with AttachmentMeta on success.
    * Throws on failure or cancellation.
    *
-   * @returns {Promise<import('../services/uploadService').AttachmentMeta>}
+   * @param {string} conversationId - required for the storage path
+   * @returns {Promise<import('../firebase/storageService').AttachmentMeta>}
    */
-  const startUpload = useCallback(async () => {
+  const startUpload = useCallback(async (conversationId) => {
     if (!file) throw new Error('No file staged for upload.');
+    if (!conversationId) throw new Error('conversationId is required for upload.');
 
     setIsUploading(true);
     setProgress(0);
     setError(null);
 
-    const { upload, cancel } = uploadToCloudinary(file, {
-      onProgress: setProgress,
-    });
+    const { upload, cancel } = uploadAttachment(file, conversationId, setProgress);
     cancelRef.current = cancel;
 
     try {

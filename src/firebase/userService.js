@@ -82,6 +82,10 @@ export const ensureUserProfile = async (user, additionalData = {}) => {
         gender,
         avatar,
         avatarType: 'preset',
+        // XP progression
+        xp:        0,
+        level:     1,
+        rankTitle: 'Beginner',
         skillsOffered: [],
         skillsWanted: [],
         online: true,
@@ -106,7 +110,9 @@ export const ensureUserProfile = async (user, additionalData = {}) => {
       const backfill = {};
 
       if (!existing.gender) backfill.gender = 'male';
-      if (!existing.avatar || existing.avatar === '') {
+      // Only backfill avatar if it's genuinely missing AND not a custom upload.
+      // When avatarType === 'custom', avatar is intentionally empty — don't overwrite.
+      if (existing.avatarType !== 'custom' && (!existing.avatar || existing.avatar === '')) {
         backfill.avatar = getDefaultAvatar(existing.gender || 'male');
         backfill.avatarType = 'preset';
       }
@@ -114,6 +120,10 @@ export const ensureUserProfile = async (user, additionalData = {}) => {
       if (!Array.isArray(existing.skillsOffered)) backfill.skillsOffered = [];
       if (!Array.isArray(existing.skillsWanted)) backfill.skillsWanted = [];
       if (existing.bio === undefined) backfill.bio = '';
+      // XP progression — backfill for pre-XP users
+      if (existing.xp        === undefined) backfill.xp = 0;
+      if (existing.level     === undefined) backfill.level = 1;
+      if (existing.rankTitle === undefined) backfill.rankTitle = 'Beginner';
       // Moderation fields — only backfill if completely absent
       if (existing.isBanned === undefined) backfill.isBanned = false;
       if (existing.warningCount === undefined) backfill.warningCount = 0;

@@ -108,8 +108,10 @@ export const subscribeToPublicSkills = (callback) => {
             category: skill.category,   // real metadata from profile
             level: skill.level,          // real metadata from profile
             tags: [],
-            ownerName: user.displayName || user.name || 'Anonymous',
-            ownerAvatar: user.avatar || null,
+            ownerName:       user.displayName || user.name || 'Anonymous',
+            ownerAvatar:     user.avatar     || null,
+            ownerAvatarType: user.avatarType || 'preset',
+            ownerAvatarUrl:  user.avatarType === 'custom' ? (user.avatarUrl || null) : null,
             ownerUid: uid,
             requestsCount: (user.skillRequestCounts?.[skill.name.toLowerCase()] || 0),
             createdAt: user.createdAt || null,

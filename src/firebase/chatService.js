@@ -91,25 +91,25 @@ export const mimeToMsgType = (mimeType = '') => {
 /**
  * Send a message inside a chat.
  *
- * Firestore schema v3 (current)
- * ─────────────────────────────
+ * Firestore schema v4 (current — Firebase Storage)
+ * ─────────────────────────────────────────────────
  * {
  *   type         : 'text' | 'attachment'
  *   text         : string           // caption / body (may be empty for file-only)
- *   attachment   : AttachmentMeta | null   // full Cloudinary metadata
+ *   attachment   : AttachmentMeta | null
  *   senderId     : string
  *   createdAt    : serverTimestamp
  *   timestamp    : serverTimestamp  // retained for orderBy("timestamp") query
  *   read         : boolean
  * }
  *
- * AttachmentMeta shape:
+ * AttachmentMeta shape (Firebase Storage):
  * {
- *   type, fileCategory, mimeType, resourceType,
- *   url (secure_url), publicId, format, bytes, originalName, createdAt
+ *   type, fileCategory, fileName, mimeType,
+ *   size, url (download URL), storagePath, uploadedAt
  * }
  *
- * MessageBubble.normalizeMessage() handles v3, v2, and legacy shapes.
+ * MessageBubble.normalizeMessage() handles v4, v3, v2, and legacy shapes.
  */
 export const sendMessage = async (chatId, senderId, text, participants = [], attachment = null) => {
   const trimmed = text?.trim() ?? '';

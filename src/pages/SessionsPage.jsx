@@ -232,7 +232,7 @@ const SessionsPage = () => {
   const peerName = isRequester ? contract.partnerName : contract.requesterName;
 
   return (
-    <div className="page-container !max-w-2xl">
+    <div className="page-container">
 
       {/* Back button */}
       <motion.button

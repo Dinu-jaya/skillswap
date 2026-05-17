@@ -124,7 +124,7 @@ const Contracts = () => {
   };
 
   return (
-    <div className="page-container !max-w-3xl">
+    <div className="page-container">
       {/* Header */}
       <motion.div className="header-spacing" {...fadeUp(0)}>
         <p className="section-label mb-4">Peer-learning agreements</p>
@@ -163,7 +163,7 @@ const Contracts = () => {
       </motion.div>
 
       {/* Tabs */}
-      <motion.div className="flex gap-1 mb-8 border-b border-white/[0.06] overflow-x-auto" {...fadeUp(1)}>
+      <motion.div className="flex overflow-x-auto gap-1 mb-8 border-b border-white/[0.06] scrollbar-none pb-px" {...fadeUp(1)}>
         {TABS.map(({ key, label, icon: Icon, color }) => {
           const count = tabCount(key);
           return (

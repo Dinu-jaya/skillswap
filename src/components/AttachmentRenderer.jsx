@@ -52,10 +52,10 @@ function FileCard({ icon: Icon, iconClass, accentClass, label, attachment, isMe 
       {/* Filename + size */}
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold truncate leading-tight">
-          {attachment.originalName || 'File'}
+          {attachment.fileName || 'File'}
         </p>
         <p className="text-[10px] opacity-50 mt-0.5">
-          {attachment.bytes != null ? `${formatFileSize(attachment.bytes)} · ` : ''}
+          {attachment.size != null ? `${formatFileSize(attachment.size)} · ` : ''}
           {label}
         </p>
       </div>
@@ -71,7 +71,7 @@ function FileCard({ icon: Icon, iconClass, accentClass, label, attachment, isMe 
         </button>
         <a
           href={attachment.url}
-          download={attachment.originalName || true}
+          download={attachment.fileName || true}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
@@ -95,7 +95,7 @@ function ImageRenderer({ attachment, isMe }) {
     >
       <img
         src={attachment.url}
-        alt={attachment.originalName || 'Image'}
+        alt={attachment.fileName || 'Image'}
         className="max-h-64 w-full rounded-xl object-cover transition-all group-hover:brightness-90"
         loading="lazy"
       />
@@ -121,7 +121,7 @@ function PdfRenderer({ attachment, isMe }) {
 }
 
 function DocumentRenderer({ attachment, isMe }) {
-  const ext = attachment.originalName?.split('.').pop()?.toUpperCase() || 'DOC';
+  const ext = attachment.fileName?.split('.').pop()?.toUpperCase() || 'DOC';
   return (
     <FileCard
       icon={FileText}
