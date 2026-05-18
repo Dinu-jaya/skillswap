@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -15,18 +15,69 @@ import { isUserBanned, checkBanStatus } from '../firebase/banUtils';
 export const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
-// ─── BAN_MESSAGE — single source of truth ────────────────────────────────────
 export const BAN_MESSAGE = 'Your account has been banned by admin.';
 
-export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser]   = useState(null);
-  const [userProfile, setUserProfile]   = useState(null);
-  // loading: true until the very first auth+profile resolution is complete
-  const [loading, setLoading]           = useState(true);
-  // banMessage: non-empty string when the active session is banned
-  const [banMessage, setBanMessage]     = useState('');
+// ─── Atomic state shape ───────────────────────────────────────────────────────
+// Using a single reducer ensures every auth transition is ONE render.
+// This eliminates the "loading=false but currentUser/userProfile not yet set"
+// intermediate render that causes UI flicker.
+const INITIAL_STATE = {
+  currentUser: null,
+  userProfile:  null,
+  loading:      true,   // true until onAuthStateChanged resolves exactly once
+  banMessage:   '',
+};
 
-  // ── Set online status in Firestore ────────────────────────────────────────
+function authReducer(state, action) {
+  switch (action.type) {
+    // Fired when onAuthStateChanged fires with null — user is logged out.
+    // loading → false and currentUser → null in the SAME render.
+    case 'SIGNED_OUT':
+      return {
+        currentUser: null,
+        userProfile:  null,
+        loading:      false,
+        banMessage:   state.banMessage,   // preserve for UI display
+      };
+
+    // Fired once the user is confirmed non-banned.
+    // loading stays true here — app is still gated by AppShell.
+    case 'USER_CONFIRMED':
+      return { ...state, currentUser: action.user };
+
+    // Fired when the first Firestore profile snapshot arrives.
+    // ATOMIC: userProfile + loading=false in one render — AppShell unblocks here.
+    case 'PROFILE_LOADED':
+      return { ...state, userProfile: action.profile, loading: false };
+
+    // Fired when Firestore snapshot errors out — still unblock the app.
+    case 'PROFILE_ERROR':
+      return { ...state, userProfile: null, loading: false };
+
+    // Fired when any ban is detected — wipes user state atomically.
+    case 'BANNED':
+      return {
+        currentUser: null,
+        userProfile:  null,
+        loading:      false,
+        banMessage:   BAN_MESSAGE,
+      };
+
+    case 'CLEAR_BAN':
+      return { ...state, banMessage: '' };
+
+    default:
+      return state;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const AuthProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(authReducer, INITIAL_STATE);
+  const { currentUser, userProfile, loading, banMessage } = state;
+
+  // ── Set online status ─────────────────────────────────────────────────────
   const setOnlineStatus = useCallback(async (uid, online) => {
     if (!uid) return;
     try {
@@ -39,69 +90,49 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // ── Shared sign-out (also clears ban message) ─────────────────────────────
+  // ── Shared sign-out ───────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     if (auth.currentUser) {
       await setOnlineStatus(auth.currentUser.uid, false);
     }
-    setBanMessage('');
+    dispatch({ type: 'CLEAR_BAN' });
     return signOut(auth);
   }, [setOnlineStatus]);
 
   // ── Internal forced sign-out for banned users ─────────────────────────────
   const forceBanSignOut = useCallback(async (uid) => {
     console.warn('[AuthContext] Banned user detected — forcing sign out. uid:', uid);
-    // Clear local state FIRST so UI does not flash protected content
-    setCurrentUser(null);
-    setUserProfile(null);
-    setBanMessage(BAN_MESSAGE);
-    setLoading(false);
-    // Then sign out from Firebase
+    dispatch({ type: 'BANNED' });                             // wipe UI immediately
     try { await setOnlineStatus(uid, false); } catch { /* ignore */ }
     await signOut(auth);
   }, [setOnlineStatus]);
 
   // ── Auth methods ──────────────────────────────────────────────────────────
 
-  /**
-   * Email/password login with pre-navigation ban check.
-   * Throws a special { code: 'auth/user-banned' } error if banned,
-   * which Login.jsx catches and displays without navigating.
-   */
   const login = useCallback(async (email, password) => {
-    // 1. Authenticate with Firebase
     const result = await signInWithEmailAndPassword(auth, email, password);
-
-    // 2. Immediately check Firestore ban status (before ANY navigation)
     const banned = await checkBanStatus(result.user.uid);
     if (banned) {
-      // Sign out silently — do not navigate
       await signOut(auth);
-      setBanMessage(BAN_MESSAGE);
+      dispatch({ type: 'BANNED' });
       const err = new Error(BAN_MESSAGE);
       err.code = 'auth/user-banned';
       throw err;
     }
-
     return result;
   }, []);
 
   const signup = useCallback((email, password) =>
     createUserWithEmailAndPassword(auth, email, password), []);
 
-  /**
-   * Social login with post-auth ban check.
-   */
   const signInWithSocial = useCallback(async (provider) => {
     const result = await signInWithPopup(auth, provider);
     if (result?.user) {
       await ensureUserProfile(result.user);
-
-      // Check ban immediately after social login
       const banned = await checkBanStatus(result.user.uid);
       if (banned) {
         await signOut(auth);
-        setBanMessage(BAN_MESSAGE);
+        dispatch({ type: 'BANNED' });
         const err = new Error(BAN_MESSAGE);
         err.code = 'auth/user-banned';
         throw err;
@@ -113,69 +144,88 @@ export const AuthProvider = ({ children }) => {
   const signInWithGoogle = useCallback(() => signInWithSocial(googleProvider), [signInWithSocial]);
   const signInWithGithub = useCallback(() => signInWithSocial(githubProvider), [signInWithSocial]);
 
-  // ── Auth state listener (handles reload / session restore) ────────────────
+  // ── Auth state listener ───────────────────────────────────────────────────
   useEffect(() => {
+    /**
+     * `alive` flag — prevents stale async callbacks from updating state after
+     * this effect has been cleaned up. Critical for React StrictMode, which
+     * intentionally mounts → unmounts → remounts every component in development
+     * to surface side-effect bugs. Without this flag, the first (cleaned-up)
+     * subscription's async callback can still fire and corrupt state.
+     */
+    let alive = true;
     let unsubscribeProfile = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (!alive) return;   // Discard stale callback from cleaned-up effect
+
+      // ── Logged out ──────────────────────────────────────────────────────
       if (!user) {
-        // Signed out — clean up everything
         unsubscribeProfile();
-        setCurrentUser(null);
-        setUserProfile(null);
-        setLoading(false);
+        unsubscribeProfile = () => {};
+        // ATOMIC: currentUser=null + loading=false in one render
+        dispatch({ type: 'SIGNED_OUT' });
         return;
       }
 
-      // ── Session restore: check ban BEFORE setting currentUser ─────────────
-      // This prevents the 1-render flash where currentUser is set but
-      // userProfile is still null, which used to let banned users past ProtectedRoute.
+      // ── Check ban BEFORE committing any state ───────────────────────────
+      // Prevents any flash of authenticated UI for banned users on page restore.
       const banned = await checkBanStatus(user.uid);
+      if (!alive) return;
+
       if (banned) {
-        // Don't even set currentUser — just force sign out
         await forceBanSignOut(user.uid);
         return;
       }
 
-      // Safe to set currentUser now
-      setCurrentUser(user);
+      // Commit user — loading stays true, AppShell still shows loading screen
+      dispatch({ type: 'USER_CONFIRMED', user });
 
-      // Mark user as online
+      // Fire-and-forget: mark online
       setOnlineStatus(user.uid, true);
 
-      // Backfill any missing profile fields
+      // Backfill missing profile fields (awaited so snapshot starts after)
       try {
         await ensureUserProfile(user);
       } catch (err) {
         console.warn('[AuthContext] ensureUserProfile failed:', err);
       }
 
-      // ── Real-time Firestore listener ──────────────────────────────────────
-      // This catches the case where admin bans the user while they are active.
+      if (!alive) return;
+
+      // ── Real-time profile listener ──────────────────────────────────────
+      // `loading` transitions to false ONLY inside this callback, ensuring
+      // that when AppShell unblocks the app tree, userProfile is already set.
+      // This is the ONLY place where the app becomes visible to the user.
       unsubscribeProfile = onSnapshot(
         doc(db, 'users', user.uid),
         async (snap) => {
+          if (!alive) return;
+
           const profileData = snap.exists() ? snap.data() : null;
 
-          // Real-time ban enforcement
+          // Real-time ban enforcement (admin banning an active session)
           if (isUserBanned(profileData)) {
-            unsubscribeProfile(); // stop listening before sign-out
+            unsubscribeProfile();
+            unsubscribeProfile = () => {};
             await forceBanSignOut(user.uid);
             return;
           }
 
-          setUserProfile(profileData);
-          setLoading(false);
+          // ATOMIC: userProfile + loading=false in one reducer dispatch → one render
+          dispatch({ type: 'PROFILE_LOADED', profile: profileData });
         },
         (error) => {
+          if (!alive) return;
           console.error('[AuthContext] Profile snapshot error:', error);
-          setUserProfile(null);
-          setLoading(false);
+          // Still unblock the app — just without profile data
+          dispatch({ type: 'PROFILE_ERROR' });
         }
       );
     });
 
     return () => {
+      alive = false;          // Poison all in-flight async callbacks
       unsubscribeAuth();
       unsubscribeProfile();
     };

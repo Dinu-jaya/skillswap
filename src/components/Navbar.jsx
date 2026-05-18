@@ -91,41 +91,47 @@ const Navbar = () => {
             </div>
             <div className="w-px h-4 bg-white/[0.06]" />
             <div className="flex items-center gap-3">
-              {!loading && (
+              {loading ? (
+                /* Skeleton placeholder — holds layout while auth initializes.
+                   Auth-dependent UI (avatar / chat / notifications) is NEVER
+                   painted until loading=false. This is defense-in-depth on top
+                   of the AppShell gate in App.jsx. */
+                <div className="flex items-center gap-2" aria-hidden="true">
+                  <div className="w-9 h-9 rounded-xl bg-white/[0.04]" />
+                  <div className="w-9 h-9 rounded-xl bg-white/[0.04]" />
+                  <div className="w-[76px] h-8 rounded-full bg-white/[0.04]" />
+                </div>
+              ) : currentUser ? (
+                <div className="flex items-center gap-2">
+                  <Link to="/chat" className="relative flex items-center justify-center w-9 h-9 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all">
+                    <MessageSquare size={17} strokeWidth={1.8} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-cyan-400 text-zinc-950 text-[9px] font-black leading-none">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                  <NotificationBell align="right" />
+                  <Link to="/profile" className="flex shrink-0">
+                    <Avatar
+                      avatarId={userProfile?.avatar}
+                      avatarUrl={userProfile?.avatarType === 'custom' ? userProfile?.avatarUrl : null}
+                      size={36}
+                      className="rounded-xl border border-white/[0.08] hover:border-cyan-400/50 transition-colors"
+                    />
+                  </Link>
+                </div>
+              ) : (
                 <>
-                  {currentUser ? (
-                    <div className="flex items-center gap-2">
-                      <Link to="/chat" className="relative flex items-center justify-center w-9 h-9 rounded-xl text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-all">
-                        <MessageSquare size={17} strokeWidth={1.8} />
-                        {unreadCount > 0 && (
-                          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-cyan-400 text-zinc-950 text-[9px] font-black leading-none">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                          </span>
-                        )}
-                      </Link>
-                      <NotificationBell align="right" />
-                      <Link to="/profile" className="flex shrink-0">
-                        <Avatar
-                          avatarId={userProfile?.avatar}
-                          avatarUrl={userProfile?.avatarType === 'custom' ? userProfile?.avatarUrl : null}
-                          size={36}
-                          className="rounded-xl border border-white/[0.08] hover:border-cyan-400/50 transition-colors"
-                        />
-                      </Link>
-                    </div>
-                  ) : (
-                    <>
-                      <Link to="/login" className="text-[13px] font-medium text-zinc-400 hover:text-white transition-colors">
-                        Sign In
-                      </Link>
-                      <PrimaryButton 
-                        to="/signup" 
-                        className="px-4 py-1.5 rounded-full text-[12px] bg-cyan-400/10 text-cyan-400 border border-cyan-400/20 hover:bg-cyan-400/20 hover:border-cyan-400/40"
-                      >
-                        Join Now
-                      </PrimaryButton>
-                    </>
-                  )}
+                  <Link to="/login" className="text-[13px] font-medium text-zinc-400 hover:text-white transition-colors">
+                    Sign In
+                  </Link>
+                  <PrimaryButton
+                    to="/signup"
+                    className="px-4 py-1.5 rounded-full text-[12px] bg-cyan-400/10 text-cyan-400 border border-cyan-400/20 hover:bg-cyan-400/20 hover:border-cyan-400/40"
+                  >
+                    Join Now
+                  </PrimaryButton>
                 </>
               )}
             </div>
@@ -164,49 +170,48 @@ const Navbar = () => {
                 </Link>
               ))}
               <div className="h-px w-full bg-white/[0.06] my-1" />
-              {!loading && (
-                <>
-                  {currentUser ? (
-                    <div className="flex items-center justify-between bg-white/[0.03] p-3 rounded-xl border border-white/[0.06]">
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          avatarId={userProfile?.avatar}
-                          avatarUrl={userProfile?.avatarType === 'custom' ? userProfile?.avatarUrl : null}
-                          size={40}
-                          className="rounded-full border border-white/10"
-                        />
-                        <div>
-                          <p className="text-sm font-medium text-white truncate max-w-[120px]">{userProfile?.displayName || userProfile?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}</p>
-                          <p className="text-[11px] text-zinc-500">Authenticated</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Link to="/chat" onClick={() => setIsOpen(false)} className="p-2.5 bg-white/[0.05] rounded-lg text-zinc-400 hover:text-cyan-400 transition-colors">
-                          <MessageSquare size={18} />
-                        </Link>
-                        <Link to="/dashboard" onClick={() => setIsOpen(false)} className="p-2.5 bg-cyan-400/10 rounded-lg text-cyan-400 border border-cyan-400/20">
-                          <ArrowLeftRight size={18} />
-                        </Link>
-                      </div>
+              {loading ? (
+                /* Mobile skeleton — same defense-in-depth as desktop */
+                <div className="h-[66px] rounded-xl bg-white/[0.03] border border-white/[0.06] animate-pulse" aria-hidden="true" />
+              ) : currentUser ? (
+                <div className="flex items-center justify-between bg-white/[0.03] p-3 rounded-xl border border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      avatarId={userProfile?.avatar}
+                      avatarUrl={userProfile?.avatarType === 'custom' ? userProfile?.avatarUrl : null}
+                      size={40}
+                      className="rounded-full border border-white/10"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-white truncate max-w-[120px]">{userProfile?.displayName || userProfile?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}</p>
+                      <p className="text-[11px] text-zinc-500">Authenticated</p>
                     </div>
-                  ) : (
-                    <>
-                      <Link 
-                        to="/login" 
-                        onClick={() => setIsOpen(false)}
-                        className="text-[15px] font-medium text-zinc-300 hover:text-white"
-                      >
-                        Sign In
-                      </Link>
-                      <PrimaryButton 
-                        to="/signup" 
-                        onClick={() => setIsOpen(false)}
-                        className="py-2.5 rounded-lg bg-cyan-400 text-zinc-950 mt-2"
-                      >
-                        Join Now
-                      </PrimaryButton>
-                    </>
-                  )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link to="/chat" onClick={() => setIsOpen(false)} className="p-2.5 bg-white/[0.05] rounded-lg text-zinc-400 hover:text-cyan-400 transition-colors">
+                      <MessageSquare size={18} />
+                    </Link>
+                    <Link to="/dashboard" onClick={() => setIsOpen(false)} className="p-2.5 bg-cyan-400/10 rounded-lg text-cyan-400 border border-cyan-400/20">
+                      <ArrowLeftRight size={18} />
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="text-[15px] font-medium text-zinc-300 hover:text-white"
+                  >
+                    Sign In
+                  </Link>
+                  <PrimaryButton
+                    to="/signup"
+                    onClick={() => setIsOpen(false)}
+                    className="py-2.5 rounded-lg bg-cyan-400 text-zinc-950 mt-2"
+                  >
+                    Join Now
+                  </PrimaryButton>
                 </>
               )}
             </div>
